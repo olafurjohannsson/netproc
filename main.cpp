@@ -1,29 +1,46 @@
 
-#include "utils.cpp"
-
-
 #include <iostream>
 #include <vector>
 
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
+#include <random>
+#include "utils.cpp"
 
-
+const int magic = 4;
 
 void wait(int seconds)
 {
-	boost::this_thread::sleep_for(boost::chrono::seconds{seconds});
+	boost::this_thread::sleep_for(boost: :chrono::seconds{seconds});
 }
 
 
 int main()
 {
     std::cout << "Starting app on " << utils::datetime_string() << std::endl;
-
+    network_listener<std::string> netlistener(8000);
+    
+    int i = 0;
     while (true)
     {
-    	std::cout << utils::datetime_string() << std::endl;
-    	wait(2);
+        std::string s = utils::datetime_string();
+
+        netlistener.push(s);
+
+        if (i == magic)
+        {
+            i = 0;
+
+            while (!netlistener.empty()) {
+                std::cout << "popping " << netlistener.pop() << std::endl;
+                wait(1);
+            }
+        }
+
+
+        i++;
+    	std::cout << s << std::endl;
+    	wait(1);
     }
 
 

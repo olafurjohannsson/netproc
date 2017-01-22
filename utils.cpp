@@ -27,7 +27,8 @@ public:
 		int year, month, day, hour, minute, second;
 		utils::datetime(year, month, day, hour, minute, second, nullptr);
 		char buffer[128];
-		std::snprintf(buffer, sizeof(buffer), "%d.%d.%d %d:%d", day, month, year, hour, minute);
+        memset(buffer, 0x00, sizeof(buffer));
+		std::snprintf(buffer, sizeof(buffer), "%d.%d.%d %d:%d.%d", day, month, year, hour, minute, second);
 		return std::string(buffer);
 	}
 	static bool is_prime(int x)
@@ -45,6 +46,9 @@ public:
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <future>
+#include <vector>
+#include <chrono>
 
 template <class T>
 class network_listener
@@ -52,24 +56,40 @@ class network_listener
 public:
 	network_listener(int port)
 	{
-		auto workers = std::vector<std::thread> { std::thread(this->worker) };
+		this->port = port;
+	}
 
-
+	bool empty()
+	{
+		std::lock_guard<std::mutex> lock(this->m);
+		return this->q.empty();
 	}
 
 	void push(T &&t)
 	{
+		std::cout << "void push(T &&t)\n";
 		std::lock_guard<std::mutex> lock(this->m);
 		this->q.push(std::move(t));
 	}
 
-	T pop()
+	void push(T &t)
+	{
+		std::cout << "void push(T &t)\n";
+		std::lock_guard<std::mutex> lock(this->m);
+		this->q.push(t);
+	}
+
+	T& pop()
 	{
 		std::unique_lock<std::mutex> lock(this->m);
+		if (!q.empty()) {
+			T &t = std::move(this->q.front());
+			return t.pop();
+		}
 		return nullptr;
 	}
 
-	void worker(int id)
+	void worker(int id, std::function fn)
 	{
 		std::unique_lock<std::mutex> ul(m);
 		cv.wait(ul, [&] { return item_received; });
@@ -82,6 +102,7 @@ public:
 
 
 private:
+	int port;
 	std::condition_variable cv;
 	std::queue<T> q;
 	std::mutex m;
