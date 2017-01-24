@@ -1,87 +1,67 @@
 
-#include <ctime>
+
+
 #include <iostream>
-#include <string>
-#include <future>
-#include <thread>
-#include <boost/array.hpp>
+#include <random>
+#include <functional>
+#include <ctime>
 #include <boost/asio.hpp>
-#include <vector>
-#include <memory>
-
-using boost::asio::ip::tcp;
-
-#include "NetClient.cpp"
 
 
-
-std::shared_ptr<boost::asio::io_service> io_service;
-
-std::string make_datetime_string()
+class TcpClient
 {
-    std::time_t now = time(0);
-    return ctime(&now);
+public:
+	TcpClient(boost::asio::io_service &io)
+	{
+
+	}
+};
+
+
+
+bool test1(const std::string &t)
+{
+	return t.empty();
 }
 
-void client_thread() {
-	NetClient nc(io_service, "127.0.0.1", std::to_string(8000));
-	nc.send("client_thread\n");
+bool test2(std::string &&t)
+{
+	return std::move(t).empty();
 }
 
-void Log(std::string &&message)
+template<typename func>
+double measure(func fn, uint32_t times)
 {
-	std::cout << std::move(message) << std::endl;
-}
+	clock_t begin = clock();
 
-int main(int argc, char* argv[])
-{
-	Log("C++ Socket Program Started at " + make_datetime_string());
-	std::string input = "";
-	while (input != "q") {
-		std::cout << "Input: " << std::endl;
-		std::cin >> input;
-		std::cout << input << std::endl;
+	for (uint32_t i = 0; i < times; i++) {
+		fn();
 	}
 
+	clock_t end = clock();
+	return double(end - begin) / CLOCKS_PER_SEC;
+}
+
+int main()
+{
+
+	auto f1 = measure([] () -> void {
+		auto fff1 = std::to_string (rand());
+		bool ff1 = test1(fff1);
+	}, 10000000);
+
+	std::cout << f1 << std::endl;
+
+	auto f2 = measure([] () -> void {
+		bool ff2 = test2(std::to_string (rand()));
+	}, 10000000);
+
+	std::cout << f2 << std::endl;
 
 
-    std::thread t(client_thread);
+
+	return 0;
 
 
 
-
-    return 0;
-
-    try {
-        boost::asio::io_service io_service;
-        tcp::endpoint endpoint(tcp::v4(), 8005);
-
-        // listen for connection
-        tcp::acceptor acceptor(io_service, endpoint);
-
-        for (;;) {
-
-        	// create socket and accept
-        	tcp::socket socket(io_service);
-        	acceptor.accept(socket);
-
-
-            auto buff = boost::asio::buffer("test");
-
-            boost::system::error_code ign_err;
-            boost::asio::write(socket, buff,
-                    boost::asio::transfer_all(),
-                    ign_err);
-
-        }
-    }
-    catch (std::exception& err)
-    {
-        std::cerr << err.what() << std::endl;
-    }
-    
-
-    
-    
-    return 0;
 }
